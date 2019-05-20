@@ -18,7 +18,10 @@ n.base <- n.base[n.base>1 & n.base < 1000]
 sim.data <- MN_sim(n.base=n.base)
 
 # For sequencing data, we recommend the log-transformation of raw data as the BayICE input.
-res <- BayICE_iter(ref.set=log(sim.data$ref+1), mix.set=log(sim.data$mix+1),ref.id=sim.data$type,iter=2000)
+# BayICE outputs the average of iterative data after burn-in and thinning. 
+# If the complete MCMC data is required, please use BayICE_iter.
+res <- BayICE(ref.set=log(sim.data$ref+1), mix.set=log(sim.data$mix+1),ref.id=sim.data$type,iter=2000,burnin = 0.6,
+  thinning = 3)
 ```
 
 ## Contact information
