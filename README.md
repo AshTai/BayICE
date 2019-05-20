@@ -9,14 +9,16 @@ To install this package, please copy and paste following codes into your R sessi
 
 ## Example
 ```R
-library(CloneDeMix)
-data("ESCC_chr1")
-# ESCC_chr1$tumor is a G by N count matrix of tumor samples, where G is the number of loci and N is the sample size.
-# ESCC_chr1$normal is a DNA count vector of a normal sample. 
+library(BayICE)
+data("NSCLC")
+# Get the gene-specific expression for generating simulated data from real cancer data
+n.base <- rowMeans(mdata.u[,grep("N",colnames(mdata.u))])
+n.base <- n.base[n.base>1 & n.base < 1000]
 
-res <- CloneDeMix(tumor=ESCC_chr1$tumor, normal=ESCC_chr1$normal,threshold = 10^-5, iterC = 10^3,
-  CNVstate = c(0:10), method = "aic")
-head(res$CNV); head(res$MCP)
+sim.data <- MN_sim(n.base=n.base)
+
+# For sequencing data, we recommend the log-transformation of raw data as input.
+res <- BayICE_iter(ref.set=log(sim.data$ref+1), mix.set=log(sim.data$mix+1),ref.id=sim.data$type,iter=2000)
 ```
 
 ## Contact information
