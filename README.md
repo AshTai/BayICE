@@ -8,7 +8,8 @@ To install this package, please copy and paste following codes into your R sessi
 3. install_github("AshTai/BayICE")
 
 
-Required packages:
+- Required packages:
+
 require(MCMCpack)
 require(invgamma)
 require(quadprog)
