@@ -7,6 +7,15 @@ To install this package, please copy and paste following codes into your R sessi
 2. library(devtools)
 3. install_github("AshTai/BayICE")
 
+
+- Required packages
+require(MCMCpack)
+require(invgamma)
+require(quadprog)
+require(MASS)
+require(tibble)
+require(mvtnorm)
+
 ## Example
 ```R
 library(BayICE)
