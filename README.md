@@ -17,7 +17,7 @@ n.base <- n.base[n.base>1 & n.base < 1000]
 
 sim.data <- MN_sim(n.base=n.base)
 
-# For sequencing data, we recommend the log-transformation of raw data as input.
+# For sequencing data, we recommend the log-transformation of raw data as the BayICE input.
 res <- BayICE_iter(ref.set=log(sim.data$ref+1), mix.set=log(sim.data$mix+1),ref.id=sim.data$type,iter=2000)
 ```
 
