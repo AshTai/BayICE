@@ -1,39 +1,36 @@
 #' BayICE: A hierarchical Bayesian deconvolution model with stochastic search variable selection.
 #'
-#' The main function of BayICE.
+#' BayICE_iter outputs the complete MCMC procedure.
+#' Warning: Extremely High Memory usage due to the storage of iterative information.
 #'
-#' @name BayICE
+#' @name BayICE_iter
 #' @author An-Shun Tai \email{daansh13@gmail.com}
 #' @param res.set A G by N expression matrix of reference, where G is the gene number and N is the total number of reference.
 #' @param mix.set A G by M expression matrix of bulk samples, where G is the gene number and M is the total number of bulk samples.
 #' @param ref.id A vector of cell types.
 #' @param iter The number of iterations. Default is 10000.
 #' @param parC A parameter of the spike-and-slab distribution. Default is 10^-5.
-#' @return A list of estimated cell proportions (w),
-#' the probability of informative genes (p),
-#' the fraction of informative genes per cell type (pi), and
-#' the cell-specific profiles (mean).
+#' @return A list of complete iteration results:
+#' w: cell proportions, t: the indicator for informative genes,
+#' pi: the fraction of informative genes per cell type, and
+#' mean: the cell-specific profiles.
 #' @export
 #' @examples
 #' data("NSCLC")
 #' n.base <- rowMeans(mdata.u[,grep("N",colnames(mdata.u))])
 #' n.base <- n.base[n.base>1 & n.base < 1000]
 #' sim.data <- MN_sim(n.base=n.base)
-#' res <- BayICE(ref.set=log(sim.data$ref+1), mix.set=log(sim.data$mix+1),ref.id=sim.data$type,iter=2000)
+#' res <- BayICE_iter(ref.set=log(sim.data$ref+1), mix.set=log(sim.data$mix+1),ref.id=sim.data$type,iter=2000)
 
-BayICE <- function(ref.set,mix.set,ref.id,iter=10^4,parC=10^-5,burnin=0.6,thinning=3){
+BayICE_iter <- function(ref.set,mix.set,ref.id,iter=10^4,parC=10^-5){
   require(MCMCpack)
   require(invgamma)
   require(quadprog)
   require(MASS)
   require(tibble)
   require(mvtnorm)
-  #  require(bigmemory)
-  #  options(bigmemory.typecast.warning=FALSE)
-
-  # a sequence of indexes
-  seqMCMC0 <- c(round(iter*burnin):iter)
-  seqMCMC <- seqMCMC0[seq(1,length(seqMCMC0),by=thinning)]
+#  require(bigmemory)
+#  options(bigmemory.typecast.warning=FALSE)
 
   if(nrow(ref.set)!=nrow(mix.set)){
     stop("the gene lists of reference set and mixed set are inconsistent")
@@ -65,9 +62,9 @@ BayICE <- function(ref.set,mix.set,ref.id,iter=10^4,parC=10^-5,burnin=0.6,thinni
   mix <- mix.set*sqrt(N.total/N.sigma2)
 
   #note: set data storage
-  prior.t <- prior.mean <- 0
-  prior.pi <- 0
-  prior.w <- 0
+  prior.t <- prior.mean <- array(NA,dim = c(n.gene,(n.type+1),iter))
+  prior.pi <- matrix(NA,iter,(n.type+1))
+  prior.w <- array(dim=c(n.type+1,n.mix,iter))
 
   #note: set initial value
   hyper.par <- list(c=parC,a0=5,b0=50,c0=1,d0=1)
@@ -183,7 +180,7 @@ BayICE <- function(ref.set,mix.set,ref.id,iter=10^4,parC=10^-5,burnin=0.6,thinni
     prior$beta.miss <- beta.miss.sampling(1)
 
     effect_size <- cbind(prior$beta,prior$beta.miss)
-    prior.mean0 <- effect_size+prior$alpha
+    prior.mean[,,iter.c] <- effect_size+prior$alpha
 
     # update sigma2.ref
     rss.ref <- rowSums( (ref-prior$alpha%*%matrix(1,1,n.ref)-cbind(prior$beta)%*%type.design)^2)/N.total
@@ -205,7 +202,7 @@ BayICE <- function(ref.set,mix.set,ref.id,iter=10^4,parC=10^-5,burnin=0.6,thinni
     t.sample <- matrix(rbinom(n=n.gene*(n.type+1),1,prob=prob.beta),n.gene,(n.type+1))
     prior$t[t.sample==1] <- 1
     prior$t[,1] <- 0
-    prior.t0 <- prior$t
+    prior.t[,,iter.c] <- prior$t
 
     # update psi2
     par.invG.psi2 <- (effect_size)^2/(prior$t+hyper.par$c*(1-prior$t))/prior$sigma2.mix%*%matrix(1,1,n.type+1)/N.total
@@ -215,8 +212,8 @@ BayICE <- function(ref.set,mix.set,ref.id,iter=10^4,parC=10^-5,burnin=0.6,thinni
     # update pi
     prior$pi <- rbeta((n.type+1),hyper.par$c0+colSums(prior$t==1),
                       hyper.par$d0+n.gene-colSums(prior$t==1))
-    prior.pi0 <- prior$pi
-    prior.pi0[1] <- 0.5
+    prior.pi[iter.c,] <- prior$pi
+    prior.pi[,1] <- 0.5
 
     # update component prop
     gene_index <- rowSums(prior$t)!=0
@@ -224,9 +221,9 @@ BayICE <- function(ref.set,mix.set,ref.id,iter=10^4,parC=10^-5,burnin=0.6,thinni
     w_s <- apply(matrix(1:n.mix),1,function(x)rdirichlet(1,alpha =prior$w[,x]*100+1))
 
     mu.mix.1 <- prior$alpha%*%matrix(1,1,n.mix)+
-      cbind(prior$beta,prior$beta.miss)%*%w_s
+                       cbind(prior$beta,prior$beta.miss)%*%w_s
     mu.mix.2 <- prior$alpha%*%matrix(1,1,n.mix)+
-      cbind(prior$beta,prior$beta.miss)%*%prior$w
+                       cbind(prior$beta,prior$beta.miss)%*%prior$w
 
     density1 <- (dnorm(mix,mean=mu.mix.1,sd=sqrt(prior$sigma2.mix*N.total)%*%matrix(1,1,n.mix),log = T))
     density2 <- (dnorm(mix,mean=mu.mix.2,sd=sqrt(prior$sigma2.mix*N.total)%*%matrix(1,1,n.mix),log = T))
@@ -236,14 +233,7 @@ BayICE <- function(ref.set,mix.set,ref.id,iter=10^4,parC=10^-5,burnin=0.6,thinni
     accept_res <- exp(r1-r2)>runif(n.mix)
 
     prior$w[,accept_res] <- w_s[,accept_res]
-    prior.w0 <- prior$w
-
-    if(iter.c %in% seqMCMC){
-      prior.mean <- prior.mean + prior.mean0
-      prior.t <- prior.t + prior.t0
-      prior.pi <- prior.pi + prior.pi0
-      prior.w <- prior.w + prior.w0
-    }
+    prior.w[,,iter.c] <- prior$w
 
     gc()
 
@@ -251,11 +241,7 @@ BayICE <- function(ref.set,mix.set,ref.id,iter=10^4,parC=10^-5,burnin=0.6,thinni
     if(iter.c > iter){stop.sign <- T}
   }
 
-  prior.mean <- prior.mean/length(seqMCMC)
-  prior.t <- prior.t/length(seqMCMC)
-  prior.pi <- prior.pi/length(seqMCMC)
-  prior.w <- prior.w/length(seqMCMC)
   #output
-  structure(list(w=prior.w,p=prior.t,pi=prior.pi,mean=prior.mean/sqrt(N.total/N.sigma2)))
+    structure(list(w=prior.w,t=prior.t,pi=prior.pi,mean=prior.mean/sqrt(N.total/N.sigma2)))
 }
 
