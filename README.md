@@ -10,12 +10,12 @@ To install this package, please copy and paste following codes into your R sessi
 
 - Required packages:
 
-require(MCMCpack)
-require(invgamma)
-require(quadprog)
-require(MASS)
-require(tibble)
-require(mvtnorm)
+1. require(MCMCpack)
+2. require(invgamma)
+3. require(quadprog)
+4. require(MASS)
+5. require(tibble)
+6. require(mvtnorm)
 
 ## Example
 ```R
