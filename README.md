@@ -1,4 +1,4 @@
-# BayICE
+# BayICE (Bayesian deconvolution model for intracellular component exploration)
 BayICE: A hierarchical Bayesian deconvolution model with stochastic search variable selection.
 
 To install this package, please copy and paste following codes into your R session:
