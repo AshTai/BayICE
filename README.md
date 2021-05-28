@@ -34,6 +34,9 @@ res <- BayICE(ref.set=log(sim.data$ref+1), mix.set=log(sim.data$mix+1),ref.id=si
   thinning = 3)
 ```
 
+## Reference
+An-Shun Tai, George C. Tseng, and Wen-Ping Hsieh* (2021). BayICE: A Bayesian hierarchical model for semi-reference-based deconvolution of bulk transcriptomic data. Annals of Applied Statistics. 15(1) 391 - 411. https://doi.org/10.1214/20-AOAS1376.
+
 ## Contact information
-Anshun Tai ([daansh13@gmail.com](mailto:daansh13@gmail.com))
+An-Shun Tai ([daansh13@gmail.com](mailto:daansh13@gmail.com))
 https://anshuntai.weebly.com
